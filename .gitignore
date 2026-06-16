@@ -29,3 +29,7 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Root JSON files
+eda_infos.json
+pipeline_metrics_and_summary.json
