@@ -1,0 +1,31 @@
+*.md
+# Sensitive files
+groq_api_key.txt
+*.env
+.env*
+*.key
+
+# Data & Databases
+*.db
+*.sqlite
+*.sqlite3
+data/
+mlruns/
+backend/mlruns/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+
+# OS
+.DS_Store
+Thumbs.db

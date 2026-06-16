@@ -1,0 +1,130 @@
+{
+    "dataset_readiness": {
+        "total_observations": 2075259,
+        "structural_gap_count": 25979,
+        "missing_value_ratios": {
+            "Global_active_power": 0.012518437457686004,
+            "Global_reactive_power": 0.012518437457686004,
+            "Voltage": 0.012518437457686004,
+            "Global_intensity": 0.012518437457686004,
+            "Sub_metering_1": 0.012518437457686004,
+            "Sub_metering_2": 0.012518437457686004,
+            "Sub_metering_3": 0.012518437457686004
+        },
+        "modeling_complexity_indicator": "High",
+        "overall_readiness": "Production-Ready"
+    },
+    "distributions": {
+        "Global_active_power": {
+            "skewness": 1.7863457648562133,
+            "kurtosis": 4.2193469315569505,
+            "zero_inflation_ratio": 0.0,
+            "requires_transformation": true,
+            "is_heavy_tailed": true
+        },
+        "Global_reactive_power": {
+            "skewness": 1.2627479999579299,
+            "kurtosis": 2.6099311116690114,
+            "zero_inflation_ratio": 0.23495253432413063,
+            "requires_transformation": false,
+            "is_heavy_tailed": false
+        },
+        "Voltage": {
+            "skewness": -0.3265843164309587,
+            "kurtosis": 0.7246274122663348,
+            "zero_inflation_ratio": 0.0,
+            "requires_transformation": false,
+            "is_heavy_tailed": false
+        },
+        "Global_intensity": {
+            "skewness": 1.8492048726092987,
+            "kurtosis": 4.601900071618156,
+            "zero_inflation_ratio": 0.0,
+            "requires_transformation": true,
+            "is_heavy_tailed": true
+        },
+        "Sub_metering_1": {
+            "skewness": 5.945040753867441,
+            "kurtosis": 35.649094190062264,
+            "zero_inflation_ratio": 0.9174810969086207,
+            "requires_transformation": true,
+            "is_heavy_tailed": true
+        },
+        "Sub_metering_2": {
+            "skewness": 7.091210433179145,
+            "kurtosis": 57.91881476281024,
+            "zero_inflation_ratio": 0.7011435766566153,
+            "requires_transformation": true,
+            "is_heavy_tailed": true
+        },
+        "Sub_metering_3": {
+            "skewness": 0.7247820660404092,
+            "kurtosis": -1.282083450213981,
+            "zero_inflation_ratio": 0.4158065408428249,
+            "requires_transformation": false,
+            "is_heavy_tailed": false
+        }
+    },
+    "temporal_stability": {
+        "adf_statistic": -14.237413537451976,
+        "p_value": 1.5586040871608697e-26,
+        "is_stationary": true,
+        "transformation_implications": "Stationary. No initial differencing required for AR models."
+    },
+    "temporal_patterns": {
+        "dominant_periodicities": [
+            "24H (Daily)",
+            "168H (Weekly)"
+        ],
+        "seasonality_strength": 0.20392698616352609
+    },
+    "regime_analysis": {
+        "structural_variance": 0.278384470065558,
+        "identified_regimes": "Seasonal variances mapped reliably on 365-day cycles with stable local bounds."
+    },
+    "target_relationships": {
+        "primary_target": "Global_active_power",
+        "spearman_rank_correlations": {
+            "Global_active_power": 1.0,
+            "Global_reactive_power": 0.21642025565677372,
+            "Voltage": -0.3417095899510259,
+            "Global_intensity": 0.9981033212022931,
+            "Sub_metering_1": 0.44169268660506755,
+            "Sub_metering_2": 0.1876794831938862,
+            "Sub_metering_3": 0.6935369402645951,
+            "Iso_Anomaly": -0.17090040268788587
+        }
+    },
+    "predictive_signal_ranking": {
+        "Global_intensity": 3.208148862218311,
+        "Sub_metering_3": 0.6050495064483603,
+        "Sub_metering_2": 0.14874900499506927,
+        "Sub_metering_1": 0.13622922112401414,
+        "Global_reactive_power": 0.11931268405307183,
+        "Voltage": 0.11806757143785873
+    },
+    "feature_redundancy": {
+        "highly_correlated_feature_groups": []
+    },
+    "time_dependent_relationships": {
+        "Voltage_Target_correlation_volatility": 0.1392354559060712,
+        "boundary_maximum": -0.08490841695736497,
+        "boundary_minimum": -0.7436813052713049
+    },
+    "anomaly_characteristics": {
+        "detected_anomaly_contamination": 0.009832323764375385,
+        "clustering_behavior": "Anomalies map primarily to high-spike threshold breaches tightly localized in winter periods.",
+        "model_isolation_score_bound_proxy": 0.01
+    },
+    "drift_baseline": {
+        "reference_mean": 1.1031331195556031,
+        "reference_std": 0.9675183107386012,
+        "observed_historical_drift_JS_Divergence": 0.1734067981422602,
+        "suggested_warning_threshold_JS": 0.15
+    },
+    "explicit_retraining_triggers": {
+        "statistical_drift_breach": "Continuously failing JS Divergence threshold > 0.15 over a 14-day tracking window.",
+        "concept_drift_breach": "Target non-stationarity verified (ADF p-value > 0.05 on 30-day subset).",
+        "structural_performance_breach": "R2 degradation of >= 15% against the primary correlation bounds mapping Sub_metering logic."
+    }
+}

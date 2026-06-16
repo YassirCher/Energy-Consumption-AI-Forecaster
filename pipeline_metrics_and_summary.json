@@ -1,0 +1,115 @@
+{
+    "model_performances": {
+        "Ridge": {
+            "RMSE": 0.1165124139286855,
+            "MAE": 0.047717022591090695,
+            "R2": 0.9819228680704313
+        },
+        "LightGBM": {
+            "RMSE": 0.03255426611772419,
+            "MAE": 0.01982143375538469,
+            "R2": 0.9985887597777363
+        },
+        "XGBoost": {
+            "RMSE": 0.03313601847370862,
+            "MAE": 0.02005406024200329,
+            "R2": 0.9985378707186081
+        }
+    },
+    "feature_importances": {
+        "Ridge": {
+            "Global_intensity": 0.9807999087787936,
+            "Global_active_power_lag1h": 0.24680229526280154,
+            "Global_intensity_lag1h": 0.21078719746425764,
+            "Sub_metering_3": 0.09569183498571439,
+            "Global_active_power_lag24h": 0.09553791719035597,
+            "Global_intensity_lag24h": 0.07868060694401643,
+            "Global_reactive_power": 0.0472114419308097,
+            "Sub_metering_3_lag1h": 0.026583855605781394,
+            "Sub_metering_3_lag24h": 0.011436998247363486,
+            "hour_sin": 0.007504778233010012,
+            "Sub_metering_1": 0.006717320377154305,
+            "Voltage_lag1h": 0.006263457386388956,
+            "Global_reactive_power_lag1h": 0.0060840239362476515,
+            "Voltage": 0.006053700920307034,
+            "Sub_metering_2": 0.004732020778701312
+        },
+        "LightGBM": {
+            "Global_intensity": 1643.0,
+            "Global_reactive_power": 693.0,
+            "Global_active_power_lag1h": 398.0,
+            "Voltage": 345.0,
+            "Sub_metering_3": 326.0,
+            "Sub_metering_1": 171.0,
+            "Global_reactive_power_lag1h": 166.0,
+            "Global_intensity_lag1h": 153.0,
+            "Global_active_power_lag24h": 148.0,
+            "hour_cos": 108.0,
+            "Sub_metering_2": 77.0,
+            "Global_reactive_power_lag24h": 67.0,
+            "Sub_metering_3_lag1h": 58.0,
+            "Voltage_lag1h": 50.0,
+            "Sub_metering_3_lag24h": 32.0
+        },
+        "XGBoost": {
+            "Global_intensity": 0.9907954931259155,
+            "Global_reactive_power": 0.0022359476424753666,
+            "Global_active_power_lag24h": 0.0009848258923739195,
+            "Global_active_power_lag1h": 0.0009072250686585903,
+            "Sub_metering_3": 0.000638273311778903,
+            "Sub_metering_1": 0.0004956191987730563,
+            "Global_reactive_power_lag1h": 0.00046782282879576087,
+            "Global_reactive_power_lag24h": 0.0004647062160074711,
+            "Voltage": 0.00044420131598599255,
+            "hour_cos": 0.00041772116674110293,
+            "Voltage_lag1h": 0.00034657574724406004,
+            "Sub_metering_3_lag1h": 0.0003140042826998979,
+            "Voltage_lag24h": 0.0002844379050657153,
+            "Global_intensity_lag1h": 0.0002819243527483195,
+            "Sub_metering_3_lag24h": 0.0002465971920173615
+        }
+    },
+    "applied_preprocessing": {
+        "missing_values": "Forward-fill + Rolling Mean 24h",
+        "power_transformed_features": [
+            "Global_intensity",
+            "Sub_metering_1",
+            "Sub_metering_2"
+        ],
+        "robust_scaled_features": [
+            "Global_reactive_power",
+            "Voltage",
+            "Sub_metering_3",
+            "hour_sin",
+            "hour_cos",
+            "dow_sin",
+            "dow_cos",
+            "Global_intensity_lag1h",
+            "Global_intensity_lag24h",
+            "Sub_metering_3_lag1h",
+            "Sub_metering_3_lag24h",
+            "Sub_metering_2_lag1h",
+            "Sub_metering_2_lag24h",
+            "Sub_metering_1_lag1h",
+            "Sub_metering_1_lag24h",
+            "Global_reactive_power_lag1h",
+            "Global_reactive_power_lag24h",
+            "Voltage_lag1h",
+            "Voltage_lag24h",
+            "Global_active_power_lag1h",
+            "Global_active_power_lag24h"
+        ],
+        "cyclical_features_added": [
+            "hour_sin",
+            "hour_cos",
+            "dow_sin",
+            "dow_cos"
+        ],
+        "lag_features": [
+            "1H",
+            "24H"
+        ]
+    },
+    "target_transformer_used": "Yeo-Johnson",
+    "evaluation_horizon": "1-minute step ahead (using historical lags natively)"
+}
