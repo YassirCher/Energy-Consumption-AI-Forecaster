@@ -1,9 +1,12 @@
-*.md
-# Sensitive files
+# Sensitive files and local configuration
 groq_api_key.txt
-*.env
-.env*
+.env
+.env.*
+!.env.example
 *.key
+*.pem
+*.p12
+*.pfx
 
 # Data & Databases
 *.db
@@ -25,11 +28,27 @@ dist/
 build/
 .npm
 .eslintcache
+coverage/
+frontend/lint_results.txt
 
-# OS
+# Editors & OS
+.idea/
+.vscode/
 .DS_Store
 Thumbs.db
 
 # Root JSON files
 eda_infos.json
 pipeline_metrics_and_summary.json
+
+# Legacy local design notes (superseded by the curated root documentation)
+/backend/README.md
+/core.md
+/data_pipeline.md
+/frontend/README.md
+/frontend/frontend_functionalities.md
+/frontend_functionalities.md
+/launch_frontend_backend.md
+/optimisations.md
+/recommendation.md
+/technical.md

@@ -2,6 +2,14 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "containerAppName": {
+      "type": "string",
+      "defaultValue": "ca-ecoforecaster"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "spaincentral"
+    },
     "image": {
       "type": "string"
     },
@@ -31,8 +39,8 @@
     {
       "type": "Microsoft.App/containerApps",
       "apiVersion": "2026-01-01",
-      "name": "ca-ecoforecaster",
-      "location": "spaincentral",
+      "name": "[parameters('containerAppName')]",
+      "location": "[parameters('location')]",
       "tags": {
         "project": "ecoforecaster",
         "managed-by": "github-actions"
@@ -157,7 +165,7 @@
   "outputs": {
     "fqdn": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.App/containerApps', 'ca-ecoforecaster'), '2026-01-01').configuration.ingress.fqdn]"
+      "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName')), '2026-01-01').configuration.ingress.fqdn]"
     }
   }
 }

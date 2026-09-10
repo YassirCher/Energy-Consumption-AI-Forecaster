@@ -15,14 +15,14 @@ permissions:
   contents: read
 
 env:
-  AZURE_CLIENT_ID: 3c911b9b-14c3-4120-b304-a7b2bd42a018
-  AZURE_TENANT_ID: edb91f0f-b3cd-4005-9dcb-38c8fee5d20e
-  AZURE_SUBSCRIPTION_ID: aa6a24cf-e8c4-49c3-95c1-d33a42485ba2
-  AZURE_RESOURCE_GROUP: rg-multi-ag-ai-rag-es
-  AZURE_CONTAINER_APP: ca-ecoforecaster
-  ACR_NAME: multiagairagllmops
-  ACR_SERVER: multiagairagllmops.azurecr.io
-  IMAGE_NAME: ecoforecaster
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  AZURE_CONTAINER_APP: ${{ vars.AZURE_CONTAINER_APP }}
+  ACR_NAME: ${{ vars.ACR_NAME }}
+  ACR_SERVER: ${{ vars.ACR_NAME }}.azurecr.io
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
 
 jobs:
   validate:
@@ -77,6 +77,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          required=(
+            AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID
+            AZURE_RESOURCE_GROUP AZURE_CONTAINER_APP ACR_NAME IMAGE_NAME
+          )
+          for name in "${required[@]}"; do
+            if [ -z "${!name}" ]; then
+              echo "Missing GitHub Actions repository variable: $name"
+              exit 1
+            fi
+          done
       - name: Log in to Azure with OIDC
         uses: azure/login@v2
         with:

@@ -24,7 +24,7 @@ from src.ml.drift_detector import DriftDetector
 from src.ml.self_healing import SelfHealer
 from src.api.auth import (
     LoginRequest, TokenResponse, authenticate_user, create_access_token,
-    get_current_user, get_optional_user, require_admin
+    get_current_user, require_admin
 )
 from src.api.agents import orchestrator, chat_agent, anomaly_explainer, agent_registry
 from src.api.graph_rag import get_graph, rebuild_graph
@@ -737,7 +737,7 @@ def compare_models():
 
 
 @app.get("/insights")
-def get_insights():
+def get_insights(_user: dict = Depends(get_current_user)):
     cached = cache.get("ai_insights", ttl_seconds=120)  # Increased from 30s — insights are expensive
     if cached:
         return cached
@@ -843,11 +843,8 @@ def _generate_rule_based_insights(drift_alerts):
 
 
 @app.post("/retrain")
-def trigger_manual_retrain(background_tasks: BackgroundTasks, user: dict = Depends(get_optional_user)):
-    username = user["username"] if user else "admin"
-    role = user["role"] if user else "admin"
-    if role != "admin":
-        raise HTTPException(status_code=403, detail="Admin privileges required")
+def trigger_manual_retrain(background_tasks: BackgroundTasks, user: dict = Depends(require_admin)):
+    username = user["username"]
     healer = SelfHealer()
     background_tasks.add_task(healer.trigger_retraining)
     log_system_event_with_user("Manual Retrain", "Retraining pipeline initiated by operator.", 
@@ -856,11 +853,8 @@ def trigger_manual_retrain(background_tasks: BackgroundTasks, user: dict = Depen
 
 
 @app.post("/models/rollback")
-def rollback_model(user: dict = Depends(get_optional_user)):
-    username = user["username"] if user else "admin"
-    role = user["role"] if user else "admin"
-    if role != "admin":
-        raise HTTPException(status_code=403, detail="Admin privileges required")
+def rollback_model(user: dict = Depends(require_admin)):
+    username = user["username"]
     rollback_path = os.path.join(base_dir, "models", "rollback_schema.json")
     production_path = os.path.join(base_dir, "models", "production_schema.json")
 
@@ -1323,7 +1317,7 @@ class ChatRequest(BaseModel):
     question: str
 
 @app.post("/ai/chat")
-def ai_chat(req: ChatRequest):
+def ai_chat(req: ChatRequest, _user: dict = Depends(get_current_user)):
     # Rate limit AI requests
     if not ai_rate_limiter.allow("chat"):
         return {
@@ -1372,7 +1366,7 @@ class AnomalyExplainRequest(BaseModel):
     timestamp: str = ""
 
 @app.post("/ai/explain-anomaly")
-def explain_anomaly(req: AnomalyExplainRequest):
+def explain_anomaly(req: AnomalyExplainRequest, _user: dict = Depends(get_current_user)):
     system_data = {"metrics": model_mgr.metrics, "health": healthcheck()}
     graph_context = get_graph().enrich_context("drift")
     return anomaly_explainer.explain(req.model_dump(), system_data, graph_context)
@@ -1465,7 +1459,7 @@ def get_knowledge_graph():
 # ─── AGENTS OBSERVABILITY ENDPOINTS ───────────────────────────────────────────
 
 @app.get("/ai/agents/status")
-def get_agents_status():
+def get_agents_status(_user: dict = Depends(get_current_user)):
     """Return live status of all agents for the observability page."""
     return {
         "agents": agent_registry.get_all_statuses(),
@@ -1474,7 +1468,7 @@ def get_agents_status():
 
 
 @app.post("/ai/agents/run/{agent_name}")
-def trigger_agent_run(agent_name: str):
+def trigger_agent_run(agent_name: str, _user: dict = Depends(get_current_user)):
     """Manually trigger a specific agent for testing/debugging."""
     # Build system data
     detector = DriftDetector()
@@ -1525,7 +1519,7 @@ def trigger_agent_run(agent_name: str):
 # ─── AI SYSTEM / MCP TRACE ENDPOINTS ─────────────────────────────────────────
 
 @app.get("/ai/system/info")
-def get_ai_system_info():
+def get_ai_system_info(_user: dict = Depends(get_current_user)):
     """Return full AI system module registry and configuration."""
     return {
         "platform": "EcoForecaster",
@@ -1592,7 +1586,7 @@ def get_ai_system_info():
 
 
 @app.get("/ai/system/traces")
-def get_system_traces(limit: int = 20):
+def get_system_traces(limit: int = 20, _user: dict = Depends(get_current_user)):
     """Return recent AI request execution traces."""
     traces = agent_registry.get_traces(limit)
     return {
