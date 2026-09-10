@@ -15,9 +15,21 @@ from passlib.context import CryptContext
 
 # ─── Configuration ──────────────────────────────────────────────────────────────
 
-SECRET_KEY = "ecoforecaster-v5-secret-key-change-in-production"
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "ecoforecaster-local-development-only")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
+DEFAULT_ADMIN_PASSWORD = os.environ.get("DEFAULT_ADMIN_PASSWORD", "admin123")
+DEFAULT_VIEWER_PASSWORD = os.environ.get("DEFAULT_VIEWER_PASSWORD", "viewer123")
+
+if os.environ.get("ENVIRONMENT") == "production":
+    required_secrets = {
+        "JWT_SECRET_KEY": os.environ.get("JWT_SECRET_KEY"),
+        "DEFAULT_ADMIN_PASSWORD": os.environ.get("DEFAULT_ADMIN_PASSWORD"),
+        "DEFAULT_VIEWER_PASSWORD": os.environ.get("DEFAULT_VIEWER_PASSWORD"),
+    }
+    missing_secrets = [name for name, value in required_secrets.items() if not value]
+    if missing_secrets:
+        raise RuntimeError(f"Missing production authentication configuration: {', '.join(missing_secrets)}")
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _DB_PATH = os.path.join(_BASE_DIR, "users.db")
@@ -56,13 +68,13 @@ def _ensure_users_table():
     # Seed default users if they don't exist
     cur.execute("SELECT COUNT(*) FROM users")
     if cur.fetchone()[0] == 0:
-        admin_hash = pwd_context.hash("admin123")
-        viewer_hash = pwd_context.hash("viewer123")
+        admin_hash = pwd_context.hash(DEFAULT_ADMIN_PASSWORD)
+        viewer_hash = pwd_context.hash(DEFAULT_VIEWER_PASSWORD)
         cur.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
                     ("admin", admin_hash, "admin"))
         cur.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
                     ("viewer", viewer_hash, "viewer"))
-        print("[Auth] Default users created: admin/admin123, viewer/viewer123")
+        print("[Auth] Default admin and viewer accounts created from environment configuration")
 
     conn.commit()
     conn.close()

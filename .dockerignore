@@ -1,0 +1,17 @@
+.git
+.github
+.agents
+.codex
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+frontend/dist
+backend/mlruns
+backend/data
+data
+notebooks
+**/*.db
+**/*.env*
+**/*.key
+**/groq_api_key.txt
+*.md

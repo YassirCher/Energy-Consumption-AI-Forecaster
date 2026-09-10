@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ConfigDict, Field
 import mlflow.sklearn
 import numpy as np
 import pandas as pd
@@ -32,9 +33,15 @@ from src.api.llm_service import get_active_model, get_fallback_model, get_cache_
 
 app = FastAPI(title="EcoForecaster — AI-Powered Energy Platform", version="5.1.0")
 
+cors_origins = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -76,6 +83,8 @@ ai_rate_limiter = SimpleRateLimiter(min_interval_seconds=3.0)
 # ─── Pydantic Schemas ──────────────────────────────────────────────────────────
 
 class SingleInference(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     Global_intensity: float = Field(..., description="Intensity metric")
     Global_reactive_power: float = 0.0
     Voltage: float = 240.0
@@ -100,9 +109,6 @@ class SingleInference(BaseModel):
     hour_cos: float = 1.0
     dow_sin: float = 0.0
     dow_cos: float = 1.0
-
-    class Config:
-        extra = "ignore"
 
 class InferenceRequest(BaseModel):
     features: list[dict]
@@ -277,7 +283,23 @@ class ModelManager:
             "Data_Version": cfg.get("data_version", "Unknown")
         }
 
+        bundled_root = os.path.join(base_dir, "model_artifacts")
+        bundled_models = {
+            "base": os.path.join(bundled_root, "base"),
+            "1h": os.path.join(bundled_root, "1h"),
+            "24h": os.path.join(bundled_root, "24h"),
+        }
+
         try:
+            if all(os.path.isfile(os.path.join(path, "MLmodel")) for path in bundled_models.values()):
+                print("Loading bundled production models...")
+                self.model = mlflow.sklearn.load_model(bundled_models["base"])
+                self.model_1h = mlflow.sklearn.load_model(bundled_models["1h"])
+                self.model_24h = mlflow.sklearn.load_model(bundled_models["24h"])
+                self.extract_importances()
+                print("All 3 bundled horizon models loaded successfully.")
+                return True
+
             print("Loading production models from MLflow registry...")
             self.model = mlflow.sklearn.load_model(f"models:/{cfg.get('best_model')}/latest")
             self.model_1h = mlflow.sklearn.load_model(f"models:/{cfg.get('model_1h')}/latest")
@@ -1580,6 +1602,34 @@ def get_system_traces(limit: int = 20):
     }
 
 
+# Serve the production frontend from the same origin as the API. This keeps
+# browser API and SSE requests portable across local, preview, and Azure URLs.
+frontend_dir = os.environ.get(
+    "FRONTEND_DIST_DIR",
+    os.path.abspath(os.path.join(base_dir, "..", "frontend_dist")),
+)
+frontend_assets_dir = os.path.join(frontend_dir, "assets")
+
+if os.path.isdir(frontend_assets_dir):
+    app.mount("/assets", StaticFiles(directory=frontend_assets_dir), name="frontend-assets")
+
+    @app.get("/", include_in_schema=False)
+    def serve_frontend_index():
+        return FileResponse(os.path.join(frontend_dir, "index.html"))
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def serve_frontend_path(path: str):
+        requested_path = os.path.abspath(os.path.join(frontend_dir, path))
+        if os.path.commonpath([frontend_dir, requested_path]) == frontend_dir and os.path.isfile(requested_path):
+            return FileResponse(requested_path)
+        return FileResponse(os.path.join(frontend_dir, "index.html"))
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", "8000")),
+        reload=os.environ.get("UVICORN_RELOAD", "false").lower() == "true",
+    )

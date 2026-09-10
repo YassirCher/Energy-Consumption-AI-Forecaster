@@ -15,7 +15,7 @@ export default function ShapExplainer() {
         const data = await fetchShapSummary();
         if (data.error) { setError(data.error); }
         else { setShapData(data); }
-      } catch (e) {
+      } catch {
         setError('Failed to compute SHAP values');
       } finally {
         setLoading(false);

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { STREAM_URL } from './api';
 
 /**
  * Custom React hook for Server-Sent Events (SSE) connection.
  * Auto-connects with exponential backoff on disconnect.
  * Returns connection state, latest data, and reconnect function.
  */
-export default function useSSE(url = 'http://localhost:8000/stream/events') {
+export default function useSSE(url = STREAM_URL) {
   const [connectionState, setConnectionState] = useState('connecting'); // 'connecting' | 'connected' | 'disconnected' | 'error'
   const [lastEvent, setLastEvent] = useState(null);
   const [latestHealth, setLatestHealth] = useState(null);
@@ -15,6 +16,7 @@ export default function useSSE(url = 'http://localhost:8000/stream/events') {
   const eventSourceRef = useRef(null);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef(null);
+  const connectRef = useRef(null);
   const maxRetries = 10;
 
   const connect = useCallback(() => {
@@ -56,7 +58,7 @@ export default function useSSE(url = 'http://localhost:8000/stream/events') {
         if (retryCountRef.current < maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
           retryCountRef.current += 1;
-          retryTimeoutRef.current = setTimeout(connect, delay);
+          retryTimeoutRef.current = setTimeout(() => connectRef.current?.(), delay);
         } else {
           setConnectionState('error');
         }
@@ -83,8 +85,10 @@ export default function useSSE(url = 'http://localhost:8000/stream/events') {
   }, [connect]);
 
   useEffect(() => {
-    connect();
+    connectRef.current = connect;
+    const initialConnect = setTimeout(connect, 0);
     return () => {
+      clearTimeout(initialConnect);
       disconnect();
     };
   }, [connect, disconnect]);

@@ -10,7 +10,6 @@ export default React.memo(function AIAssistant({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const endRef = useRef(null);
   const inputRef = useRef(null);
-  const abortRef = useRef(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });

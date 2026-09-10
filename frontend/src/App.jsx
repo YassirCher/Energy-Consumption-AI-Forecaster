@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { fetchHealth, fetchMetrics, fetchMetricsHistory, fetchEvents, fetchAlerts, fetchInsights, triggerRetrain, triggerRollback, exportPredictions, exportAlerts, exportMetrics, login as apiLogin, logout as apiLogout } from './api';
+import { STREAM_URL, fetchHealth, fetchMetrics, fetchMetricsHistory, fetchEvents, fetchAlerts, fetchInsights, triggerRetrain, triggerRollback, exportPredictions, exportAlerts, exportMetrics, login as apiLogin, logout as apiLogout } from './api';
 import './index.css';
 
 import ErrorBoundary from './components/ErrorBoundary';
@@ -85,13 +85,15 @@ export default function App() {
     const connect = () => {
       setSseState('connecting');
       try {
-        eventSource = new EventSource('http://localhost:8000/stream/events');
+        eventSource = new EventSource(STREAM_URL);
         eventSource.onopen = () => { setSseState('connected'); retryCount = 0; };
         eventSource.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
             if (data.health) setHealth(data.health);
-          } catch {}
+          } catch {
+            // Ignore malformed stream events and keep the connection alive.
+          }
         };
         eventSource.onerror = () => {
           eventSource.close();

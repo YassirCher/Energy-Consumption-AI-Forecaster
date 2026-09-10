@@ -162,7 +162,6 @@ export default function AgentsObservability() {
 
   const idleCount = agents.filter(a => a.status === 'idle').length;
   const runningCount = agents.filter(a => a.status === 'running').length;
-  const errorCount = agents.filter(a => a.status === 'error').length;
   const totalRuns = agents.reduce((sum, a) => sum + (a.execution_count || 0), 0);
 
   return (

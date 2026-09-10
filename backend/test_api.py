@@ -13,7 +13,16 @@ client = TestClient(app)
 def test_health():
     response = client.get("/system/health")
     assert response.status_code == 200
-    assert "status" in response.json()
+    payload = response.json()
+    assert payload["status"] == "healthy"
+    assert all(payload["models_loaded"].values())
+
+def test_prediction_uses_bundled_models():
+    response = client.post("/predict", json={"features": [{}]})
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["predictions"]) == 1
+    assert payload["model_version"] == "EnergyForecaster_LightGBM"
 
 def test_login_success():
     response = client.post("/auth/login", json={"username": "admin", "password": "admin123"})

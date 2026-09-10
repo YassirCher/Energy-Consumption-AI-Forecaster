@@ -3,31 +3,19 @@ import { FileText, Printer, Activity, ShieldCheck, TrendingUp, AlertTriangle, Za
 import { generateReport } from '../api';
 import LoadingState from './LoadingState';
 
-export default function ReportViewer() {
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleGenerate = async () => {
-    setLoading(true);
-    try { setReport(await generateReport()); } catch {}
-    setLoading(false);
-  };
-
-  const fmt = (ts) => {
-    if (!ts) return '—';
-    try { return new Date(typeof ts === 'number' ? ts : ts).toLocaleString(); } catch { return ts; }
-  };
-
-  const Section = ({ icon: Icon, color, title, children }) => (
+function Section({ icon, color, title, children }) {
+  return (
     <div className="card" style={{ marginBottom: 20 }}>
       <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Icon size={18} color={color} /> {title}
+        {React.createElement(icon, { size: 18, color })} {title}
       </h3>
       {children}
     </div>
   );
+}
 
-  const StatBox = ({ items }) => (
+function StatBox({ items }) {
+  return (
     <div className="grid-cols-4" style={{ gap: 16 }}>
       {items.map((item, i) => (
         <div key={i} className="card card-inset" style={{ textAlign: 'center', padding: 16 }}>
@@ -37,6 +25,26 @@ export default function ReportViewer() {
       ))}
     </div>
   );
+}
+
+export default function ReportViewer() {
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      setReport(await generateReport());
+    } catch (error) {
+      console.error('Report generation failed:', error);
+    }
+    setLoading(false);
+  };
+
+  const fmt = (ts) => {
+    if (!ts) return '—';
+    try { return new Date(typeof ts === 'number' ? ts : ts).toLocaleString(); } catch { return ts; }
+  };
 
   if (!report && !loading) return (
     <div className="animate-fade-in">

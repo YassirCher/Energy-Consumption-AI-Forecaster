@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Power, RotateCcw, Server, Database, Clock, Shield, Download, FileText, Sun, Moon } from 'lucide-react';
 import { exportPredictions, exportAlerts, exportMetrics } from '../api';
 
-export default function Settings({ onRetrain, onRollback, health, metrics, theme, setTheme, isAdmin, user }) {
+export default function Settings({ onRetrain, onRollback, health, metrics, theme, setTheme, isAdmin }) {
   const [loadingRetrain, setLoadingRetrain] = useState(false);
   const [loadingRollback, setLoadingRollback] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -92,7 +92,7 @@ export default function Settings({ onRetrain, onRollback, health, metrics, theme
           ].map((item, i) => (
             <div key={i} style={{ padding: '12px 16px', borderRight: i < 3 ? '1px solid var(--border-light)' : 'none' }}>
               <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <item.icon size={12} /> {item.label}
+                {React.createElement(item.icon, { size: 12 })} {item.label}
               </div>
               <div style={{ fontSize: '1rem', fontWeight: 700, color: item.color, letterSpacing: '-0.01em' }}>{item.value}</div>
             </div>
@@ -156,9 +156,9 @@ export default function Settings({ onRetrain, onRollback, health, metrics, theme
             { type: 'predictions', label: 'Predictions', icon: FileText },
             { type: 'alerts', label: 'Alerts & Events', icon: Shield },
             { type: 'metrics', label: 'Metrics History', icon: Database },
-          ].map(({ type, label, icon: Icon }) => (
+          ].map(({ type, label, icon }) => (
             <button key={type} className="btn btn-ghost" onClick={() => handleExport(type)} disabled={exporting === type}>
-              {exporting === type ? <div className="loading-spinner" style={{ width: 14, height: 14 }} /> : <Icon size={15} />}
+              {exporting === type ? <div className="loading-spinner" style={{ width: 14, height: 14 }} /> : React.createElement(icon, { size: 15 })}
               {label}
             </button>
           ))}
