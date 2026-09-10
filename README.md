@@ -22,6 +22,22 @@ Production credentials and API keys are intentionally not published. Contact the
 - Admin/viewer roles with protected administrative and AI operations
 - Immutable Docker images and automated Azure Container Apps deployment
 
+## Multi-agent intelligence
+
+EcoForecaster includes a metrics-first agent system designed for MLOps analysis. Each specialist computes factual measurements in Python before asking the configured LLM to interpret them, so the narrative remains grounded in observable platform data.
+
+| Agent | Responsibility |
+| --- | --- |
+| **Drift Analyst Agent** | Measures Jensen-Shannon divergence, threshold breaches, breach rate, trend, consecutive events, and drift risk. |
+| **Performance Analyst Agent** | Evaluates the active model's R², RMSE, performance threshold, historical trend, volatility, and degradation risk. |
+| **Feature Importance Agent** | Identifies dominant predictors, top-feature concentration, feature diversity, and reliance risk. |
+| **System Health Agent** | Checks the health score, P99 latency against the 200 ms target, active model, and readiness of all forecast horizons. |
+| **Orchestrator** | Runs the four specialists and combines their structured results with Graph RAG context into prioritized, actionable insights. |
+| **Chat Agent** | Answers authenticated questions about health, performance, drift, and feature importance using the current system state. |
+| **Anomaly Explainer Agent** | Interprets a detected anomaly, assesses likely causes or false positives, and recommends a response. |
+
+The agent registry exposes live status, execution duration, errors, invoked modules, and recent traces in the **AI Agents** and **AI System** dashboard views. If an LLM request fails, specialist agents retain their computed metrics and report a partial result; the insights route also has a rule-based fallback. AI-backed endpoints require authentication and are rate-limited and cached to control access, latency, and provider usage.
+
 ## Architecture
 
 ```mermaid
