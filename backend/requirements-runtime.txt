@@ -1,7 +1,7 @@
 fastapi==0.115.6
 uvicorn==0.34.0
 mlflow==3.7.0
-numpy==2.4.2
+numpy==2.5.3
 pandas==2.3.3
 scipy==1.16.2
 lightgbm==4.6.0
