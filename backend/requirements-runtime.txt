@@ -3,7 +3,7 @@ uvicorn==0.34.0
 mlflow==3.7.0
 numpy==2.4.2
 pandas==2.3.3
-scipy==1.16.2
+scipy==1.18.1
 lightgbm==4.6.0
 xgboost==3.1.1
 scikit-learn==1.8.0
