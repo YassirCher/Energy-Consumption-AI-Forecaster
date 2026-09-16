@@ -71,7 +71,7 @@ export default function Overview({ health, metrics, history, insights, onOpenAI 
           <div>
             <div className="metric-title">
               <Gauge size={14} /> Health Score
-              <TooltipIcon text="Composite score from R², latency, and drift status" />
+              <TooltipIcon text="Composite score from leakage-free horizon gates, latency, and drift status" />
             </div>
             <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: 4 }}>
               <strong>{health?.latency_p99_ms || 0}</strong>ms P99 latency
@@ -82,8 +82,8 @@ export default function Overview({ health, metrics, history, insights, onOpenAI 
         {/* R² */}
         <div className="card">
           <div className="metric-title">
-            <ShieldCheck size={14} /> Validation R²
-            <TooltipIcon text="Coefficient of determination on validation set" />
+            <ShieldCheck size={14} /> Test R² (T+1 min)
+            <TooltipIcon text="Coefficient of determination on the untouched T+1-minute test set" />
           </div>
           <div className="metric-value">{r2Value}</div>
           {histData.length > 0 && (
@@ -100,8 +100,8 @@ export default function Overview({ health, metrics, history, insights, onOpenAI 
         {/* RMSE */}
         <div className="card">
           <div className="metric-title">
-            <TrendingUp size={14} /> Validation RMSE
-            <TooltipIcon text="Root mean squared error — lower is better" />
+            <TrendingUp size={14} /> Test RMSE (T+1 min)
+            <TooltipIcon text="Root mean squared error on the untouched T+1-minute test set — lower is better" />
           </div>
           <div className="metric-value">{rmseValue}</div>
           {rmseData.length > 0 && (

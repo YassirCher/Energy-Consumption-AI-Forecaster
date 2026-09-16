@@ -5,15 +5,73 @@
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)
 ![Azure Container Apps](https://img.shields.io/badge/Azure-Container%20Apps-0078D4?logo=microsoftazure&logoColor=white)
 
-EcoForecaster is a full-stack energy-consumption forecasting and MLOps observability platform. It combines multi-horizon LightGBM models, drift and anomaly monitoring, SHAP explanations, scenario simulation, JWT-based roles, and optional Groq-powered AI analysis in one responsive dashboard.
+EcoForecaster is an enterprise-grade energy forecasting and MLOps observability platform. It demonstrates how to **merge empirical Data Science** (leakage-free causal time-series forecasting, LightGBM/XGBoost, SHAP explainability, Jensen-Shannon drift monitoring, and what-if simulation) with **modern AI Engineering** (multi-agent autonomous orchestration, Graph RAG contextual enrichment, Groq LLM reasoning grounded in real-time metrics, and reactive streaming dashboards).
 
 **Live application:** [ca-ecoforecaster.prouddune-d60d19a6.spaincentral.azurecontainerapps.io](https://ca-ecoforecaster.prouddune-d60d19a6.spaincentral.azurecontainerapps.io)
 
 Production credentials and API keys are intentionally not published. Contact the repository owner for authorized demo access.
 
+---
+
+## 🌟 Merging Data Science with AI Engineering
+
+Traditional machine learning projects often stay confined to offline notebooks, while modern LLM demos frequently lack statistical grounding and operational rigor. EcoForecaster demonstrates a unified production architecture:
+
+| 🔬 Data Science Rigor | 🤖 AI Engineering Excellence |
+| :--- | :--- |
+| **Causal Time-Series Forecasting**: Strict `causal_v2` multi-horizon models (+1m, +1h, +24h) with $R^2 = 0.944$ test accuracy and 95% confidence bounds. | **Multi-Agent Autonomous Mesh**: 5 specialized agents (Drift, Performance, Feature Importance, System Health, Orchestrator) monitoring production state. |
+| **Explainability**: Game-theoretic SHAP (`TreeExplainer`) attribution and global feature ranking. | **Graph RAG & Grounded LLMs**: Knowledge graph combining models, metrics, and alerts to inject verifiable context into Groq LPU inference. |
+| **Statistical Telemetry**: Jensen-Shannon distribution drift tracking and Isolation Forest anomaly detection. | **Real-Time Streaming Engine**: FastAPI Server-Sent Events (SSE), semantic prompt caching, and zero-downtime model rollbacks. |
+
+---
+
+## 🖥️ Platform Showcase
+
+<div align="center">
+  <img src="screenshots/01_overview.png" alt="EcoForecaster Command Center" width="850" />
+  <p><em>Executive Command Center: Real-time health scoring (100%), model accuracy ($R^2 = 0.944$), P99 latency (14 ms), and live event stream.</em></p>
+</div>
+
+<div align="center">
+  <table width="100%">
+    <tr>
+      <td width="50%" align="center">
+        <img src="screenshots/02_predictions.png" alt="Multi-Horizon Forecasting" width="420" />
+        <br /><strong>Real-Time Multi-Horizon Forecasting</strong>
+      </td>
+      <td width="50%" align="center">
+        <img src="screenshots/03_ai_agents.png" alt="Multi-Agent Observability" width="420" />
+        <br /><strong>Autonomous Multi-Agent Mesh</strong>
+      </td>
+    </tr>
+    <tr>
+      <td width="50%" align="center">
+        <img src="screenshots/07_scenario_simulator.png" alt="Interactive Simulator" width="420" />
+        <br /><strong>Interactive What-If Scenario Simulator</strong>
+      </td>
+      <td width="50%" align="center">
+        <img src="screenshots/05_drift_intelligence.png" alt="Drift Intelligence" width="420" />
+        <br /><strong>Jensen-Shannon Drift Intelligence</strong>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div align="center" style="margin: 28px 0;">
+  <a href="app.md">
+    <img src="https://img.shields.io/badge/🔍%20SEE%20MORE%20OF%20THE%20APP%20INFOS-Explore%20Full%20Screenshots%20&%20Deep%20Dive%20→-10b981?style=for-the-badge&logo=readme&logoColor=white" alt="See More of the App Infos" />
+  </a>
+</div>
+
+> [!TIP]
+> 🚀 **Looking for a deep-dive walkthrough?**
+> Check out [**`app.md` (Complete EcoForecaster Application Guide)**](app.md) for all 15 high-resolution feature screenshots, detailed agent workflows, Graph RAG schemas, and production API specifications.
+
+---
+
 ## Highlights
 
-- Current, one-hour, and 24-hour energy forecasts from bundled production models
+- One-minute, one-hour, and 24-hour energy forecasts from bundled production models
 - Live system health, latency, model metrics, alerts, and Server-Sent Events
 - Jensen-Shannon drift detection and hybrid Isolation Forest/Z-score anomaly detection
 - Global and local SHAP explanations, feature evolution, and model comparison
@@ -21,6 +79,21 @@ Production credentials and API keys are intentionally not published. Contact the
 - Optional Graph RAG, specialist AI agents, and Groq-backed explanations
 - Admin/viewer roles with protected administrative and AI operations
 - Immutable Docker images and automated Azure Container Apps deployment
+
+## Leakage-free evaluation
+
+The production training protocol is `causal_v2`. It predicts T+1 minute, T+1 hour, and T+24 hours from measurements available at the forecast origin or earlier. Sensor gaps are filled only from the past, targets are never imputed, and horizon-sized purges separate chronological train, validation, and test partitions.
+
+Model selection uses validation RMSE. Only the selected model for each horizon is evaluated on the untouched test partition. Promotion additionally requires all leakage checks to pass, each model to improve on its causal baseline RMSE by at least 1%, and per-horizon test R² floors of 0.93, 0.30, and 0.20.
+
+```powershell
+Set-Location backend
+python src/data/pyspark_pipeline.py
+python -m src.ml.train --evaluate-only
+python -m src.ml.train --promote
+```
+
+`POST /predict` keeps the compatible `1_step` response field; it now explicitly means a T+1-minute forecast rather than same-timestamp reconstruction.
 
 ## Multi-agent intelligence
 

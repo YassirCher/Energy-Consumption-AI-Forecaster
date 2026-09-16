@@ -12,9 +12,10 @@ groq_api_key.txt
 *.db
 *.sqlite
 *.sqlite3
-data/
-mlruns/
-backend/mlruns/
+/data/
+/backend/data/
+/mlruns/
+/backend/mlruns/
 
 # Python
 __pycache__/

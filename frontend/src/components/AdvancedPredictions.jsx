@@ -137,7 +137,7 @@ export default function AdvancedPredictions() {
         </div>
         <div className="stats-banner-item">
           <div className="stats-banner-value" style={{ color: 'var(--text-main)' }}>{stats.avgError}</div>
-          <div className="stats-banner-label">Avg Absolute Error</div>
+          <div className="stats-banner-label">Simulated Avg Absolute Error</div>
         </div>
         <div className="stats-banner-item">
           <div className="stats-banner-value" style={{ color: stats.anomalyCount > 0 ? 'var(--status-error)' : 'var(--status-success)' }}>

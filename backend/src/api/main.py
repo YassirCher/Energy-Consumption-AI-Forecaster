@@ -138,6 +138,10 @@ class TTLCache:
         with self._lock:
             self._store[key] = (value, time.time())
 
+    def clear(self):
+        with self._lock:
+            self._store.clear()
+
 cache = TTLCache()
 
 # ─── Prediction History Buffer ─────────────────────────────────────────────────
@@ -260,7 +264,9 @@ class ModelManager:
             if regressor and hasattr(regressor, 'feature_importances_'):
                 imp = regressor.feature_importances_
                 imp = imp / imp.sum()
-                res = [{"feature": f, "importance": float(imp[i])} for i, f in enumerate(self.required_features)]
+                preprocessor = self.model.named_steps.get('preprocessor', None)
+                names = list(preprocessor.get_feature_names_out()) if preprocessor else self.required_features
+                res = [{"feature": f, "importance": float(imp[i])} for i, f in enumerate(names)]
                 self.feature_importances = sorted(res, key=lambda x: x["importance"], reverse=True)
         except Exception as e:
             print(f"Feature importance extraction note: {e}")
@@ -273,33 +279,60 @@ class ModelManager:
         with open(schema_path, "r") as f:
             cfg = json.load(f)
 
-        self.required_features = cfg.get("required_features", [])
-        self.metrics = {
-            "R2": cfg.get("latest_r2"),
-            "RMSE": cfg.get("latest_rmse"),
-            "R2_1h": cfg.get("latest_r2_1h"),
-            "R2_24h": cfg.get("latest_r2_24h"),
-            "Active_Model": cfg.get("best_model"),
-            "Data_Version": cfg.get("data_version", "Unknown")
-        }
-
-        bundled_root = os.path.join(base_dir, "model_artifacts")
-        bundled_models = {
-            "base": os.path.join(bundled_root, "base"),
-            "1h": os.path.join(bundled_root, "1h"),
-            "24h": os.path.join(bundled_root, "24h"),
-        }
-
         try:
+            schema_version = cfg.get("schema_version", 1)
+            if schema_version == 2:
+                configured_paths = cfg.get("artifact_paths", {})
+                bundled_models = {}
+                for label, api_name in (("1_step", "base"), ("1h", "1h"), ("24h", "24h")):
+                    relative_path = configured_paths.get(label)
+                    if not relative_path:
+                        raise ValueError(f"Missing artifact path for {label}")
+                    resolved = os.path.abspath(os.path.join(base_dir, relative_path))
+                    if os.path.commonpath([base_dir, resolved]) != os.path.abspath(base_dir):
+                        raise ValueError(f"Artifact path escapes backend directory: {relative_path}")
+                    bundled_models[api_name] = resolved
+            else:
+                bundled_root = os.path.join(base_dir, "model_artifacts")
+                bundled_models = {
+                    "base": os.path.join(bundled_root, "base"),
+                    "1h": os.path.join(bundled_root, "1h"),
+                    "24h": os.path.join(bundled_root, "24h"),
+                }
+
             if all(os.path.isfile(os.path.join(path, "MLmodel")) for path in bundled_models.values()):
-                print("Loading bundled production models...")
-                self.model = mlflow.sklearn.load_model(bundled_models["base"])
-                self.model_1h = mlflow.sklearn.load_model(bundled_models["1h"])
-                self.model_24h = mlflow.sklearn.load_model(bundled_models["24h"])
+                print(f"Loading production model bundle (schema v{schema_version})...")
+                model = mlflow.sklearn.load_model(bundled_models["base"])
+                model_1h = mlflow.sklearn.load_model(bundled_models["1h"])
+                model_24h = mlflow.sklearn.load_model(bundled_models["24h"])
+                self.required_features = cfg.get("required_features", [])
+                self.model, self.model_1h, self.model_24h = model, model_1h, model_24h
+                horizons = cfg.get("horizons", {})
+                self.metrics = {
+                    "R2": cfg.get("latest_r2"),
+                    "RMSE": cfg.get("latest_rmse"),
+                    "MAE": cfg.get("latest_mae"),
+                    "R2_1h": cfg.get("latest_r2_1h"),
+                    "R2_24h": cfg.get("latest_r2_24h"),
+                    "Active_Model": cfg.get("best_model"),
+                    "Active_Models": {
+                        "1_step": cfg.get("best_model"),
+                        "1h": cfg.get("model_1h"),
+                        "24h": cfg.get("model_24h"),
+                    },
+                    "Data_Version": cfg.get("data_version", "Unknown"),
+                    "Evaluation_Protocol": cfg.get("evaluation_protocol", "legacy_v1"),
+                    "Schema_Version": schema_version,
+                    "Legacy_Evaluation": schema_version != 2,
+                    "Horizons": horizons,
+                    "Quality_Gate": cfg.get("quality_gate", {}),
+                }
                 self.extract_importances()
                 print("All 3 bundled horizon models loaded successfully.")
                 return True
 
+            if schema_version == 2:
+                raise FileNotFoundError("One or more configured v2 artifact bundles are missing.")
             print("Loading production models from MLflow registry...")
             self.model = mlflow.sklearn.load_model(f"models:/{cfg.get('best_model')}/latest")
             self.model_1h = mlflow.sklearn.load_model(f"models:/{cfg.get('model_1h')}/latest")
@@ -342,6 +375,13 @@ def log_system_event_with_user(event_type, description, model_name="None", trans
     conn.commit()
     conn.close()
 
+
+def write_json_atomic(path, payload):
+    temp_path = f"{path}.tmp-{os.getpid()}-{time.time_ns()}"
+    with open(temp_path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+    os.replace(temp_path, path)
+
 # ─── Endpoints ──────────────────────────────────────────────────────────────────
 
 @app.get("/system/health")
@@ -353,7 +393,17 @@ def healthcheck():
     if status == "healthy":
         health_score = 100
         health_score -= min(10, model_mgr.p99_latency_ms / 10)
-        health_score -= (1.0 - r2) * 50 if r2 > 0 else 50
+        if model_mgr.metrics.get("Legacy_Evaluation"):
+            health_score -= 25
+        else:
+            horizon_metrics = model_mgr.metrics.get("Horizons", {})
+            failed_gates = sum(
+                1 for details in horizon_metrics.values()
+                if not details.get("gate", {}).get("passed", False)
+            )
+            health_score -= failed_gates * 15
+            if r2 <= 0:
+                health_score -= 20
         detector = DriftDetector()
         alerts = detector.get_latest_alerts()
         if alerts:
@@ -397,14 +447,22 @@ def get_metrics_history():
         runs = client.search_runs(experiment.experiment_id, order_by=["start_time ASC"])
         history = []
         for r in runs:
-            r2 = r.data.metrics.get("val_r2")
+            if (
+                r.data.tags.get("evaluation_protocol") != "causal_v2"
+                or r.data.tags.get("selected") != "true"
+                or r.data.tags.get("horizon") != "1_step"
+            ):
+                continue
+            r2 = r.data.metrics.get("test_r2")
             if r2 is not None:
                 history.append({
                     "timestamp": r.info.start_time,
                     "run_name": r.data.tags.get("mlflow.runName", "Run"),
                     "r2": r2,
-                    "rmse": r.data.metrics.get("val_rmse", 0),
-                    "mae": r.data.metrics.get("val_mae", 0)
+                    "rmse": r.data.metrics.get("test_rmse", 0),
+                    "mae": r.data.metrics.get("test_mae", 0),
+                    "evaluation_protocol": "causal_v2",
+                    "horizon_minutes": 1,
                 })
         result = {"history": history}
         cache.set("metrics_history", result)
@@ -430,21 +488,26 @@ def get_performance_timeline():
         runs = client.search_runs(experiment.experiment_id, order_by=["start_time ASC"])
         timeline = []
         for r in runs:
-            r2 = r.data.metrics.get("val_r2")
-            rmse = r.data.metrics.get("val_rmse")
+            if (
+                r.data.tags.get("evaluation_protocol") != "causal_v2"
+                or r.data.tags.get("selected") != "true"
+                or r.data.tags.get("horizon") != "1_step"
+            ):
+                continue
+            r2 = r.data.metrics.get("test_r2")
+            rmse = r.data.metrics.get("test_rmse")
             if r2 is not None:
                 run_name = r.data.tags.get("mlflow.runName", "Run")
-                # Only include base model runs (not horizon-specific)
-                if "1h" not in run_name and "24h" not in run_name:
-                    timeline.append({
-                        "timestamp": r.info.start_time,
-                        "run_name": run_name,
-                        "r2": round(r2, 6),
-                        "rmse": round(rmse, 6) if rmse else None,
-                        "mae": round(r.data.metrics.get("val_mae", 0), 6),
-                        "model_type": next((arch for arch in ["Ridge", "LightGBM", "XGBoost"] if arch in run_name), "Unknown"),
-                        "is_degraded": r2 < 0.98
-                    })
+                timeline.append({
+                    "timestamp": r.info.start_time,
+                    "run_name": run_name,
+                    "r2": round(r2, 6),
+                    "rmse": round(rmse, 6) if rmse else None,
+                    "mae": round(r.data.metrics.get("test_mae", 0), 6),
+                    "model_type": r.data.tags.get("model_type", "Unknown"),
+                    "is_degraded": r2 < 0.93,
+                    "evaluation_protocol": "causal_v2",
+                })
 
         result = {"timeline": timeline}
         cache.set("perf_timeline", result)
@@ -489,8 +552,14 @@ def get_feature_importance_history():
 
         for r in runs:
             run_name = r.data.tags.get("mlflow.runName", "Run")
-            r2 = r.data.metrics.get("val_r2")
-            if r2 is None or "1h" in run_name or "24h" in run_name:
+            if (
+                r.data.tags.get("evaluation_protocol") != "causal_v2"
+                or r.data.tags.get("selected") != "true"
+                or r.data.tags.get("horizon") != "1_step"
+            ):
+                continue
+            r2 = r.data.metrics.get("test_r2")
+            if r2 is None:
                 continue
 
             # Try to load feature importance artifact if stored
@@ -506,7 +575,8 @@ def get_feature_importance_history():
                     if regressor and hasattr(regressor, 'feature_importances_'):
                         imp = regressor.feature_importances_
                         imp = imp / imp.sum()
-                        features = model_mgr.required_features
+                        preprocessor = model.named_steps.get('preprocessor', None)
+                        features = list(preprocessor.get_feature_names_out()) if preprocessor else model_mgr.required_features
                         if len(features) == len(imp):
                             importances = [{"feature": features[i], "importance": float(imp[i])} for i in range(len(imp))]
                             importances.sort(key=lambda x: x["importance"], reverse=True)
@@ -686,6 +756,12 @@ def compare_models():
         model_map = {}
         for r in runs:
             run_name = r.data.tags.get("mlflow.runName", "")
+            if (
+                r.data.tags.get("evaluation_protocol") != "causal_v2"
+                or r.data.tags.get("candidate") != "true"
+                or r.data.tags.get("horizon") != "1_step"
+            ):
+                continue
             r2 = r.data.metrics.get("val_r2")
             rmse = r.data.metrics.get("val_rmse")
             mae = r.data.metrics.get("val_mae")
@@ -800,13 +876,14 @@ def _generate_rule_based_insights(drift_alerts):
     rmse = model_mgr.metrics.get("RMSE", 0)
 
     if r2 and r2 > 0:
-        status = "Excellent" if r2 > 0.995 else ("Stable" if r2 > 0.98 else "Degrading")
-        sev = "info" if r2 > 0.98 else "warning"
+        gate_passed = model_mgr.metrics.get("Quality_Gate", {}).get("passed", False)
+        status = "Passed" if gate_passed else "Below Quality Gate"
+        sev = "info" if gate_passed else "warning"
         insights.append({
             "type": "performance", "severity": sev,
             "title": f"Model Performance {status}",
             "message": f"R² = {r2:.4f}, RMSE = {rmse:.4f}.",
-            "metric": round(r2, 4), "actionable": r2 < 0.98,
+            "metric": round(r2, 4), "actionable": not gate_passed,
             "source": "rule_based"
         })
 
@@ -842,11 +919,24 @@ def _generate_rule_based_insights(drift_alerts):
     return insights
 
 
+def run_retrain_and_reload():
+    report = SelfHealer().trigger_retraining()
+    if report.get("promoted"):
+        if not model_mgr.load_latest_production_model():
+            raise RuntimeError("Promoted bundle could not be loaded by the API.")
+        cache.clear()
+    return report
+
+
 @app.post("/retrain")
 def trigger_manual_retrain(background_tasks: BackgroundTasks, user: dict = Depends(require_admin)):
     username = user["username"]
-    healer = SelfHealer()
-    background_tasks.add_task(healer.trigger_retraining)
+    if not SelfHealer.training_data_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Retraining data is not mounted. Provide the raw dataset or causal processed parquet.",
+        )
+    background_tasks.add_task(run_retrain_and_reload)
     log_system_event_with_user("Manual Retrain", "Retraining pipeline initiated by operator.", 
                                 model_mgr.metrics.get("Active_Model", "None"), "Evaluating", user=username)
     return {"status": "accepted", "message": "Retraining pipeline initiated in background."}
@@ -862,32 +952,47 @@ def rollback_model(user: dict = Depends(require_admin)):
         raise HTTPException(status_code=404, detail="No rollback state available. No previous model configuration found.")
 
     try:
+        current = None
         if os.path.exists(production_path):
             with open(production_path, "r") as f:
                 current = json.load(f)
 
         with open(rollback_path, "r") as f:
             rollback = json.load(f)
+        if rollback.get("schema_version") != 2 or not rollback.get("available", False):
+            raise HTTPException(status_code=404, detail=rollback.get(
+                "reason", "No previous leakage-free production bundle is available."
+            ))
+        if current.get("schema_version") != 2:
+            raise HTTPException(status_code=409, detail="Current production schema is not rollback-compatible.")
 
-        with open(production_path, "w") as f:
-            json.dump(rollback, f)
+        restored = dict(rollback)
+        restored.pop("available", None)
+        archived = dict(current)
+        archived["available"] = True
+        write_json_atomic(production_path, restored)
+        write_json_atomic(rollback_path, archived)
 
-        with open(rollback_path, "w") as f:
-            json.dump(current, f)
-
-        model_mgr.load_latest_production_model()
+        if not model_mgr.load_latest_production_model():
+            write_json_atomic(production_path, current)
+            write_json_atomic(rollback_path, rollback)
+            model_mgr.load_latest_production_model()
+            raise HTTPException(status_code=500, detail="Rollback bundle failed to load; production was restored.")
+        cache.clear()
 
         log_system_event_with_user(
             "Model Rollback",
             f"Rolled back to: {rollback.get('best_model', 'unknown')}",
             rollback.get("best_model", "None"),
             "Restored",
-            user="admin"
+            user=username
         )
 
         cache.set("models_compare", None)
 
         return {"status": "success", "restored_model": rollback.get("best_model")}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Rollback failed: {str(e)}")
 
@@ -947,6 +1052,7 @@ def predict(request: InferenceRequest, background_tasks: BackgroundTasks):
     return {
         "predictions": results,
         "model_version": model_mgr.metrics.get("Active_Model"),
+        "horizons_minutes": {"1_step": 1, "1h_horizon": 60, "24h_horizon": 1440},
         "latency_ms": round(latency, 2)
     }
 
@@ -1408,6 +1514,12 @@ def ab_test_models():
         model_map = {}
         for r in runs:
             run_name = r.data.tags.get("mlflow.runName", "")
+            if (
+                r.data.tags.get("evaluation_protocol") != "causal_v2"
+                or r.data.tags.get("candidate") != "true"
+                or r.data.tags.get("horizon") != "1_step"
+            ):
+                continue
             r2 = r.data.metrics.get("val_r2")
             rmse = r.data.metrics.get("val_rmse")
             mae = r.data.metrics.get("val_mae")

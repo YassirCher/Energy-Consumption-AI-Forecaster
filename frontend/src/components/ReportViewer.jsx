@@ -98,7 +98,7 @@ export default function ReportViewer() {
 
       <Section icon={ShieldCheck} color="var(--accent-primary)" title="Model Performance">
         <div className="grid-cols-3" style={{ gap: 16 }}>
-          {[{ l: 'R²', v: mp.current_metrics?.R2?.toFixed(4) }, { l: 'RMSE', v: mp.current_metrics?.RMSE?.toFixed(4) }, { l: 'Data Version', v: mp.current_metrics?.Data_Version?.split('_')[0] }].map((x, i) => (
+          {[{ l: 'Test R² (T+1 min)', v: mp.current_metrics?.R2?.toFixed(4) }, { l: 'Test RMSE (T+1 min)', v: mp.current_metrics?.RMSE?.toFixed(4) }, { l: 'Data Version', v: mp.current_metrics?.Data_Version?.split('_')[0] }].map((x, i) => (
             <div key={i}><div style={{ fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>{x.l}</div><div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{x.v || '—'}</div></div>
           ))}
         </div>

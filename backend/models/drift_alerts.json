@@ -1,0 +1,82 @@
+[
+    {
+        "timestamp": "2026-09-16T15:22:20.716324",
+        "js_divergence": 0.032,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    },
+    {
+        "timestamp": "2026-09-16T15:27:20.716324",
+        "js_divergence": 0.041,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    },
+    {
+        "timestamp": "2026-09-16T15:32:20.716324",
+        "js_divergence": 0.038,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    },
+    {
+        "timestamp": "2026-09-16T15:37:20.716324",
+        "js_divergence": 0.055,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    },
+    {
+        "timestamp": "2026-09-16T15:42:20.716324",
+        "js_divergence": 0.049,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    },
+    {
+        "timestamp": "2026-09-16T15:47:20.716324",
+        "js_divergence": 0.062,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    },
+    {
+        "timestamp": "2026-09-16T15:52:20.716324",
+        "js_divergence": 0.058,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    },
+    {
+        "timestamp": "2026-09-16T15:57:20.716324",
+        "js_divergence": 0.045,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    },
+    {
+        "timestamp": "2026-09-16T16:02:20.716324",
+        "js_divergence": 0.051,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    },
+    {
+        "timestamp": "2026-09-16T16:07:20.716324",
+        "js_divergence": 0.047,
+        "threshold": 0.15,
+        "is_breach": false,
+        "consecutive": 0,
+        "drift_detected": false
+    }
+]

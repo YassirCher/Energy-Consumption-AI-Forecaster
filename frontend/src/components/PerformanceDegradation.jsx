@@ -106,7 +106,7 @@ export default function PerformanceDegradation() {
       {/* Stats */}
       <div className="stats-banner">
         <div className="stats-banner-item">
-          <div className="stats-banner-value" style={{ color: latestR2 > 0.98 ? 'var(--status-success)' : 'var(--status-warning)' }}>
+          <div className="stats-banner-value" style={{ color: latestR2 >= 0.93 ? 'var(--status-success)' : 'var(--status-warning)' }}>
             {latestR2.toFixed(4)}
           </div>
           <div className="stats-banner-label">Latest R²</div>
@@ -179,7 +179,7 @@ export default function PerformanceDegradation() {
               {/* Target threshold */}
               {metricView === 'r2' && (
                 <ReferenceLine
-                  y={0.98}
+                  y={0.93}
                   stroke="var(--status-success)"
                   strokeDasharray="5 5"
                   strokeWidth={1.5}

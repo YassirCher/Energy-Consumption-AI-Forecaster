@@ -114,19 +114,17 @@ export default function App() {
 
   const loadData = useCallback(async () => {
     try {
-      const [h, hist, e, a, ins] = await Promise.allSettled([
+      const [h, hist, e, a] = await Promise.allSettled([
         fetchHealth(),
         fetchMetricsHistory(),
         fetchEvents(),
-        fetchAlerts(),
-        fetchInsights()
+        fetchAlerts()
       ]);
 
       if (h.status === 'fulfilled') setHealth(h.value);
       if (hist.status === 'fulfilled') setHistory(hist.value.history || []);
       if (e.status === 'fulfilled') setEvents(e.value.events || []);
       if (a.status === 'fulfilled') setAlerts(a.value);
-      if (ins.status === 'fulfilled') setInsights(ins.value.insights || []);
 
       if (h.status === 'fulfilled' && h.value.status !== 'cold_start') {
         try {
@@ -137,6 +135,11 @@ export default function App() {
 
       setDbError(false);
       setInitialLoading(false);
+
+      // Fetch insights asynchronously so LLM generation does not delay UI rendering
+      fetchInsights().then(ins => {
+        if (ins && ins.insights) setInsights(ins.insights);
+      }).catch(() => {});
     } catch (err) {
       console.warn('API polling notice:', err?.message);
       setDbError(true);

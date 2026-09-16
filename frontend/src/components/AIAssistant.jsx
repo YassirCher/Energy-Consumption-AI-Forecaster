@@ -2,6 +2,111 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot, User, Sparkles, ChevronDown, Loader, RefreshCw, Clock, Cpu } from 'lucide-react';
 import { askAI } from '../api';
 
+function parseInline(text) {
+  if (!text) return null;
+  const parts = [];
+  const regex = /(`[^`]+`|\*\*[^*]+\*\*)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', content: text.slice(lastIndex, match.index) });
+    }
+    const raw = match[0];
+    if (raw.startsWith('`') && raw.endsWith('`')) {
+      parts.push({ type: 'code', content: raw.slice(1, -1) });
+    } else if (raw.startsWith('**') && raw.endsWith('**')) {
+      const inner = raw.slice(2, -2).trim();
+      const isMetricVal = /^[\d.,%+\-/\s]+(?:ms|kW|s|h|%)?$/i.test(inner);
+      parts.push({ type: isMetricVal ? 'metric' : 'bold', content: inner });
+    }
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', content: text.slice(lastIndex) });
+  }
+
+  return parts.map((p, idx) => {
+    if (p.type === 'bold') {
+      return <strong key={idx} className="ai-strong">{p.content}</strong>;
+    }
+    if (p.type === 'metric') {
+      return <span key={idx} className="ai-metric-val">{p.content}</span>;
+    }
+    if (p.type === 'code') {
+      return <code key={idx} className="ai-code">{p.content}</code>;
+    }
+    const cleaned = p.content.replace(/\*{1,2}/g, '');
+    return <span key={idx}>{cleaned}</span>;
+  });
+}
+
+function FormattedAIMessage({ content }) {
+  if (!content) return null;
+
+  const lines = content.split('\n');
+  const elements = [];
+  let currentList = [];
+
+  const flushList = (keyPrefix) => {
+    if (currentList.length > 0) {
+      elements.push(
+        <div key={`${keyPrefix}-list`} className="ai-bullet-list">
+          {currentList.map((item, idx) => (
+            <div key={idx} className="ai-bullet-row">
+              <span className="ai-bullet-marker" />
+              <div className="ai-bullet-content">{parseInline(item)}</div>
+            </div>
+          ))}
+        </div>
+      );
+      currentList = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i].trim();
+    if (!rawLine) {
+      flushList(`flush-${i}`);
+      continue;
+    }
+
+    // Bullet item (* item, - item, • item)
+    const bulletMatch = rawLine.match(/^[*•-]\s+(.*)$/);
+    if (bulletMatch) {
+      currentList.push(bulletMatch[1]);
+      continue;
+    }
+
+    // Section header (**Title:** or ### Title or **Title**)
+    const headerMatch = rawLine.match(/^(?:###\s*|\*\*)([^*:]+)(?:\*\*:?|:\*\*|:)?$/);
+    if (headerMatch && !rawLine.startsWith('* ') && !rawLine.startsWith('- ')) {
+      flushList(`header-flush-${i}`);
+      const title = headerMatch[1].replace(/\*{1,2}/g, '').trim();
+      elements.push(
+        <div key={`header-${i}`} className="ai-section-title">
+          <span className="ai-section-icon">✦</span>
+          <span>{title}</span>
+        </div>
+      );
+      continue;
+    }
+
+    // Paragraph
+    flushList(`p-flush-${i}`);
+    elements.push(
+      <p key={`p-${i}`} className="ai-p">
+        {parseInline(rawLine)}
+      </p>
+    );
+  }
+
+  flushList('final-flush');
+
+  return <div className="ai-formatted-msg">{elements}</div>;
+}
+
 export default React.memo(function AIAssistant({ isOpen, onClose }) {
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Hello! I\'m EcoForecaster AI. I can answer questions about your models, drift status, feature importance, and system health. What would you like to know?', ts: Date.now() }
@@ -128,7 +233,11 @@ export default React.memo(function AIAssistant({ isOpen, onClose }) {
                     </div>
                   </details>
                 )}
-                <div className="ai-msg-text">{msg.content}</div>
+                {msg.role === 'assistant' ? (
+                  <FormattedAIMessage content={msg.content} />
+                ) : (
+                  <div className="ai-msg-text">{msg.content}</div>
+                )}
 
                 {/* Agent attribution & meta */}
                 {msg.meta && (

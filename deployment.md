@@ -146,6 +146,8 @@ az containerapp update `
 
 After a rollback, repeat the health, prediction, and frontend smoke tests. Record the selected image digest and the reason for rollback.
 
+Model rollback is available only between schema-v2 bundles evaluated with the `causal_v2` protocol. The first leakage-free promotion intentionally quarantines the legacy schema and reports that no safe rollback is available; later promotions retain the previous versioned artifact bundle for an actual model rollback.
+
 ## Troubleshooting
 
 ### The workflow reports a missing variable

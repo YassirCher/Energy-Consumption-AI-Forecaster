@@ -256,6 +256,9 @@ class PerformanceAnalystAgent(BaseAgent):
         r2 = metrics.get("R2")
         rmse = metrics.get("RMSE")
         model = metrics.get("Active_Model", "unknown")
+        quality_gate = metrics.get("Quality_Gate", {})
+        gate_passed = bool(quality_gate.get("passed", False))
+        performance_threshold = quality_gate.get("r2_floors", {}).get("1_step", 0.93)
 
         if r2 is None:
             return {}
@@ -264,10 +267,15 @@ class PerformanceAnalystAgent(BaseAgent):
             "active_model": model,
             "current_r2": round(float(r2), 6),
             "current_rmse": round(float(rmse), 6) if rmse else None,
-            "performance_threshold": 0.98,
-            "status": "OPTIMAL" if r2 > 0.995 else ("GOOD" if r2 > 0.98 else "DEGRADED"),
-            "is_degraded": r2 < 0.98,
-            "r2_gap_from_threshold": round(float(r2 - 0.98), 6),
+            "performance_threshold": performance_threshold,
+            "status": "QUALITY_GATE_PASSED" if gate_passed else "QUALITY_GATE_FAILED",
+            "is_degraded": not gate_passed,
+            "r2_gap_from_threshold": round(float(r2 - performance_threshold), 6),
+            "evaluation_protocol": metrics.get("Evaluation_Protocol", "legacy_v1"),
+            "horizon_gates": {
+                label: details.get("gate", {}).get("passed", False)
+                for label, details in metrics.get("Horizons", {}).items()
+            },
         }
 
         if history:
@@ -280,7 +288,7 @@ class PerformanceAnalystAgent(BaseAgent):
                 result["best_r2"] = round(max(r2_values), 4)
                 result["r2_volatility"] = round(float(np.std(r2_values)), 6)
 
-        result["risk_level"] = "CRITICAL" if r2 < 0.95 else ("HIGH" if r2 < 0.98 else ("LOW" if r2 > 0.995 else "MEDIUM"))
+        result["risk_level"] = "LOW" if gate_passed else "HIGH"
         return result
 
     def prepare_context(self, data: dict) -> str:

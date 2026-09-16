@@ -16,8 +16,8 @@ from groq import Groq
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _PROJECT_ROOT = os.path.dirname(_BASE_DIR)
 
-PRIMARY_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
-FALLBACK_MODEL = os.environ.get("GROQ_FALLBACK_MODEL", "qwen-2.5-32b")
+PRIMARY_MODEL = os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
+FALLBACK_MODEL = os.environ.get("GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b")
 
 def _load_api_key() -> str:
     # Check env first
@@ -166,7 +166,7 @@ def query_llm(
                         content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
 
 
-                print(f"[LLM] ✓ {model} responded in {elapsed:.0f}ms ({len(content)} chars)")
+                print(f"[LLM] [OK] {model} responded in {elapsed:.0f}ms ({len(content)} chars)")
 
                 # Cache the response
                 if use_cache:
@@ -177,7 +177,7 @@ def query_llm(
             except Exception as e:
                 last_error = e
                 error_str = str(e)
-                print(f"[LLM] ✗ {model} attempt {attempt + 1}/{retries + 1}: {error_str[:120]}")
+                print(f"[LLM] [FAIL] {model} attempt {attempt + 1}/{retries + 1}: {error_str[:120]}")
 
                 # If model is decommissioned/invalid, skip retries and try fallback
                 if "decommissioned" in error_str.lower() or "not found" in error_str.lower() or "does not exist" in error_str.lower():
