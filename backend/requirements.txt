@@ -12,5 +12,5 @@ groq>=0.4.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.0
 shap>=0.43.0
-pytest>=7.0.0
+pytest>=7.4.4
 httpx>=0.24.0
